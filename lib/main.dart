@@ -29,7 +29,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   VideoPlayerController _controller;
 
-  bool _disposeWidget = false;
+  bool _disposeWidget = true;
 
   final List<Channel> channels = [
     Channel(
@@ -55,14 +55,8 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-
     Screen.keepOn(true);
-
-    _controller = VideoPlayerController.network(channels.first.uri)
-      ..initialize().then((_) {
-        setState(() {});
-      })
-      ..play();
+    _updatePlayer(channels.first);
   }
 
   @override
@@ -81,9 +75,9 @@ class _MyHomePageState extends State<MyHomePage> {
         children: <Widget>[
           Container(
             child: !_disposeWidget
-                ? getVideoPlayer()
+                ? _getVideoPlayer()
                 : Container(
-                    child: Text('Changing Channel'),
+                    child: Text('Loading Channel'),
                   ),
           ),
           Expanded(
@@ -101,7 +95,7 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
-  Widget getVideoPlayer() {
+  Widget _getVideoPlayer() {
     return _controller.value.initialized
         ? AspectRatio(
             aspectRatio: _controller.value.aspectRatio,
@@ -122,16 +116,20 @@ class _MyHomePageState extends State<MyHomePage> {
     _controller.pause().then((pause) {
       new Timer(new Duration(milliseconds: 100), () {
         _controller.dispose().then((_) {
-          _controller = VideoPlayerController.network(channel.uri)
-            ..initialize().then((_) {
-              setState(() {
-                _disposeWidget = false;
-              });
-            })
-            ..play();
+          _updatePlayer(channel);
         });
       });
     });
+  }
+
+  void _updatePlayer(Channel channel) {
+    _controller = VideoPlayerController.network(channel.uri)
+      ..initialize().then((_) {
+        setState(() {
+          _disposeWidget = false;
+        });
+      })
+      ..play();
   }
 }
 
