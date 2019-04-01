@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:screen/screen.dart';
 import 'package:video_player/video_player.dart';
@@ -27,6 +29,8 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   VideoPlayerController _controller;
 
+  bool _disposeWidget = false;
+
   final List<Channel> channels = [
     Channel(
       name: 'TV Zoom',
@@ -54,7 +58,11 @@ class _MyHomePageState extends State<MyHomePage> {
 
     Screen.keepOn(true);
 
-    _changeChannel(channels.first);
+    _controller = VideoPlayerController.network(channels.first.uri)
+      ..initialize().then((_) {
+        setState(() {});
+      })
+      ..play();
   }
 
   @override
@@ -72,13 +80,10 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Column(
         children: <Widget>[
           Container(
-            child: _controller.value.initialized
-                ? AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
-                  )
+            child: !_disposeWidget
+                ? getVideoPlayer()
                 : Container(
-                    child: Text('Vazio.'),
+                    child: Text('Changing Channel'),
                   ),
           ),
           Expanded(
@@ -96,14 +101,37 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 
+  Widget getVideoPlayer() {
+    return _controller.value.initialized
+        ? AspectRatio(
+            aspectRatio: _controller.value.aspectRatio,
+            child: VideoPlayer(_controller),
+          )
+        : Container(
+            child: Text('Empty.'),
+          );
+  }
+
   void _changeChannel(Channel channel) {
     print(channel.uri);
 
-    _controller = VideoPlayerController.network(channel.uri)
-      ..initialize().then((_) {
-        setState(() {});
-      })
-      ..play();
+    setState(() {
+      _disposeWidget = true;
+    });
+
+    _controller.pause().then((pause) {
+      new Timer(new Duration(milliseconds: 100), () {
+        _controller.dispose().then((_) {
+          _controller = VideoPlayerController.network(channel.uri)
+            ..initialize().then((_) {
+              setState(() {
+                _disposeWidget = false;
+              });
+            })
+            ..play();
+        });
+      });
+    });
   }
 }
 
